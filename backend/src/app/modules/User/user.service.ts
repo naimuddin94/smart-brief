@@ -382,13 +382,18 @@ const resetPasswordIntoDB = async (resetToken: string, newPassword: string) => {
     throw new AppError(status.BAD_REQUEST, 'Invalid reset password token.');
   }
 
+  const hashPassword = await bcrypt.hash(
+    newPassword,
+    Number(config.bcrypt_salt_rounds)
+  );
+
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
     const updatedUser = await User.findOneAndUpdate(
       { email },
-      { password: newPassword },
+      { password: hashPassword },
       { session }
     );
 

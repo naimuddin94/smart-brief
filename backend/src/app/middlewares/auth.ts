@@ -2,8 +2,8 @@ import httpStatus from 'http-status';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import config from '../config';
 import { AppError, asyncHandler } from '../utils';
-import { TRole } from '../modules/Auth/auth.constant';
-import Auth from '../modules/Auth/auth.model';
+import { TRole } from '../modules/User/user.constant';
+import User from '../modules/User/user.model';
 
 const auth = (...requiredRoles: TRole[]) => {
   return asyncHandler(async (req, res, next) => {
@@ -25,7 +25,7 @@ const auth = (...requiredRoles: TRole[]) => {
     const { id } = decoded;
 
     // checking if the user is exist
-    const user = await Auth.findById(id);
+    const user = await User.findById(id);
 
     if (!user) {
       throw new AppError(httpStatus.NOT_FOUND, 'User not exists!');

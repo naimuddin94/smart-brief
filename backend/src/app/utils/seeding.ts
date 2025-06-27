@@ -1,17 +1,17 @@
 import config from '../config';
-import { ROLE } from '../modules/Auth/auth.constant';
-import Auth from '../modules/Auth/auth.model';
+import { ROLE } from '../modules/User/user.constant';
+import User from '../modules/User/user.model';
 import { Logger } from './logger';
 
 const seedingAdmin = async () => {
   try {
     // at first check if the admin exist of not
-    const admin = await Auth.findOne({
+    const admin = await User.findOne({
       role: ROLE.ADMIN,
       email: config.super_admin.email,
     });
     if (!admin) {
-      await Auth.create({
+      await User.create({
         name: 'Admin',
         role: ROLE.ADMIN,
         email: config.super_admin.email,
