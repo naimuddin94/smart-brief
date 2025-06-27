@@ -24,8 +24,6 @@ const auth = (...requiredRoles: TRole[]) => {
 
     const { id } = decoded;
 
-    console.log({ decoded });
-
     // checking if the user is exist
     const user = await User.findById(id);
 
