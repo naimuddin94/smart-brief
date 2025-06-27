@@ -5,6 +5,8 @@ dotenv.config({ path: path.join((process.cwd(), '.env')) });
 
 export default {
   NODE_ENV: process.env.NODE_ENV,
+  gemini_api_key: process.env.GEMINI_API_KEY,
+  redis_url: process.env.REDIS_URL,
   port: process.env.PORT,
   db_url: process.env.DB_URL,
   bcrypt_salt_rounds: process.env.BCRYPT_SALT_ROUNDS,

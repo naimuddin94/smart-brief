@@ -2,12 +2,12 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-COPY package*.json .
+COPY package*.json ./
 
-RUN yarn install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
-EXPOSE 5008
+EXPOSE 5000
 
 COPY . .
 
-CMD [ "yarn", "dev" ]
+CMD [ "pnpm", "dev" ]
