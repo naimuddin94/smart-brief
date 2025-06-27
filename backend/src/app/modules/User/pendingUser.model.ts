@@ -20,6 +20,14 @@ const pendingUserSchema = new mongoose.Schema<IPendingUser>(
       type: String,
       required: [true, 'Please provide a password'],
     },
+    otp: {
+      type: String,
+      required: false,
+    },
+    otpExpiry: {
+      type: Date,
+      required: false,
+    },
     reason: {
       type: String,
       default: OTP_REASON.SIGNUP,
@@ -27,31 +35,6 @@ const pendingUserSchema = new mongoose.Schema<IPendingUser>(
   },
   { timestamps: { createdAt: true } }
 );
-
-// Custom hooks/methods
-
-// Modified password fields before save to database
-pendingUserSchema.pre('save', async function (next) {
-  try {
-    if (this.password && (this.isModified('password') || this.isNew)) {
-      const isAlreadyHashed =
-        this.password.startsWith('$2a$') ||
-        this.password.startsWith('$2b$') ||
-        this.password.startsWith('$2y$');
-
-      if (!isAlreadyHashed) {
-        const hashPassword = await bcrypt.hash(
-          this.password,
-          Number(config.bcrypt_salt_rounds)
-        );
-        this.password = hashPassword;
-      }
-    }
-    next();
-  } catch (error: any) {
-    next(error);
-  }
-});
 
 // For generating access token
 pendingUserSchema.methods.generateAccessToken = function () {

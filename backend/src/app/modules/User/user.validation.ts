@@ -21,8 +21,8 @@ const passwordSchema = z
   .refine((val) => /\d/.test(val), {
     message: 'Password must include at least one number',
   })
-  .refine((val) => /[@$!%*?&]/.test(val), {
-    message: 'Password must include at least one special character (@$!%*?&)',
+  .refine((val) => /[@$!%*?&#]/.test(val), {
+    message: 'Password must include at least one special character (@$!%*?&#)',
   });
 
 const createSchema = z.object({
@@ -173,4 +173,6 @@ export type TSignupPayload = z.infer<typeof createSchema.shape.body>;
 export type TSigninPayload = z.infer<typeof signinSchema.shape.body>;
 export type TOtpPayload = z.infer<typeof verifyOtpSchema.shape.body>;
 export type TUpdatePayload = z.infer<typeof updateSchema.shape.body>;
-export type TChangePasswordPayload = z.infer<typeof passwordChangeSchema.shape.body>;
+export type TChangePasswordPayload = z.infer<
+  typeof passwordChangeSchema.shape.body
+>;

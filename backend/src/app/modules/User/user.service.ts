@@ -20,20 +20,26 @@ import config from '../../config';
 import jwt from 'jsonwebtoken';
 
 const savePendingUserIntoDB = async (payload: TSignupPayload) => {
-  const existingUser = await User.findOne({ email: payload.email });
+  const { email, password, fullName } = payload;
+  const existingUser = await User.findOne({ email });
 
   if (existingUser) {
     throw new AppError(status.BAD_REQUEST, 'Email already exists');
   }
 
   const otp = generateOtp();
-  await sendOtpEmail(payload.email, otp, payload.fullName);
+  await sendOtpEmail(email, otp, fullName);
 
   const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
 
+  const hashPassword = await bcrypt.hash(
+    password,
+    Number(config.bcrypt_salt_rounds)
+  );
+
   await PendingUser.findOneAndUpdate(
-    { email: payload.email },
-    { ...payload, otp, otpExpiry },
+    { email },
+    { fullName, email, password: hashPassword, otp, otpExpiry },
     { upsert: true, runValidators: true }
   );
 
@@ -72,14 +78,14 @@ const verifyOtpAndSaveUserIntoDB = async (payload: TOtpPayload) => {
   session.startTransaction();
 
   try {
-    await User.create([{ fullName, email, password }], {
+    const [user] = await User.create([{ fullName, email, password }], {
       session,
     });
     await PendingUser.findOneAndDelete({ email }, { session });
 
     await session.commitTransaction();
 
-    return { accessToken, refreshToken, fullName, email };
+    return { accessToken, refreshToken, fullName, email, _id: user._id };
   } catch (error: any) {
     await session.abortTransaction();
     throw new AppError(
@@ -290,7 +296,12 @@ const changePasswordIntoDB = async (
     throw new AppError(status.UNAUTHORIZED, 'Current password is not correct');
   }
 
-  user.password = payload.newPassword;
+  const hashPassword = await bcrypt.hash(
+    payload.newPassword,
+    Number(config.bcrypt_salt_rounds)
+  );
+
+  user.password = hashPassword;
   await user.save();
 
   return null;
@@ -368,16 +379,15 @@ const verifyOtpForForgetPassword = async (payload: {
 const resetPasswordIntoDB = async (resetToken: string, newPassword: string) => {
   const { email, isResetPassword } = (await verifyToken(resetToken)) as any;
 
-  const user = await PendingUser.findOne({
+  const pendingUser = await PendingUser.findOne({
     email,
     reason: OTP_REASON.FORGOT_PASSWORD,
   });
 
-  if (!user) {
+  if (!pendingUser) {
     throw new AppError(status.NOT_FOUND, 'User not exists!');
   }
 
-  // Check if the OTP matches
   if (!isResetPassword) {
     throw new AppError(status.BAD_REQUEST, 'Invalid reset password token.');
   }
@@ -391,11 +401,21 @@ const resetPasswordIntoDB = async (resetToken: string, newPassword: string) => {
   session.startTransaction();
 
   try {
-    const updatedUser = await User.findOneAndUpdate(
-      { email },
-      { password: hashPassword },
-      { session }
-    );
+    const updatedUser = await User.findOne({ email }).session(session);
+
+    if (!updatedUser) {
+      throw new AppError(
+        status.INTERNAL_SERVER_ERROR,
+        'Something went wrong while updating password'
+      );
+    }
+
+    updatedUser.password = hashPassword;
+    const accessToken = updatedUser.generateAccessToken();
+    const refreshToken = updatedUser.generateRefreshToken();
+
+    updatedUser.refreshToken = refreshToken;
+    await updatedUser.save({ session });
 
     await PendingUser.findOneAndDelete(
       {
@@ -405,18 +425,7 @@ const resetPasswordIntoDB = async (resetToken: string, newPassword: string) => {
       { session }
     );
 
-    if (!updatedUser) {
-      throw new AppError(
-        status.INTERNAL_SERVER_ERROR,
-        'Something went wrong while updating password'
-      );
-    }
-
-    const accessToken = updatedUser?.generateAccessToken();
-    const refreshToken = updatedUser?.generateRefreshToken();
-
-    updatedUser.refreshToken = refreshToken;
-    await updatedUser.save({ session });
+    await session.commitTransaction();
 
     return {
       _id: updatedUser._id,

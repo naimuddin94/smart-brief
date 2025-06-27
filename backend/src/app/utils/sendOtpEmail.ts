@@ -16,126 +16,88 @@ const sendOtpEmail = async (email: string, otp: string, fullName: string) => {
 
     // Email HTML template with dynamic placeholders
     const htmlTemplate = `
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="UTF-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <style>
-              body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background-color: #f9f9f9;
-                margin: 0;
-                padding: 0;
-                color: #222;
-              }
-              .container {
-                max-width: 600px;
-                margin: 30px auto;
-                background-color: #fff;
-                border-radius: 10px;
-                box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-                overflow: hidden;
-                border-top: 6px solid #D8F77C; /* deep green */
-              }
-              .header {
-                text-align: center;
-                padding: 25px 20px 10px;
-                background:rgba(216, 247, 124, 0.51);
-                border-bottom: 1px solid rgb(153, 204, 0);
-              }
-              .header img {
-                max-width: 120px;
-                margin-bottom: 10px;
-              }
-              .header h1 {
-                font-size: 26px;
-                color:rgb(0, 85, 35);
-                margin: 0 0 6px;
-                font-weight: 700;
-                letter-spacing: 1.2px;
-                font-family: 'Georgia', serif;
-              }
-              .header p {
-                font-size: 14px;
-                color: #4a4a4a;
-                margin: 0;
-                font-style: italic;
-              }
-              .content {
-                padding: 25px 30px;
-                font-size: 16px;
-                line-height: 1.6;
-                color: #444;
-              }
-              .content p {
-                margin: 15px 0;
-              }
-              .otp {
-                margin: 30px auto;
-                border-left: 6px solid rgb(153, 204, 0);
-                background: linear-gradient(135deg,rgba(255, 230, 153, 0.32),rgba(157, 242, 192, 0.26));
-                color: #262626;
-                font-size: 32px;
-                font-weight: 700;
-                padding: 15px 30px;
-                border-radius: 8px;
-                font-family: 'Courier New', Courier, monospace;
-                letter-spacing: 8px;
-                user-select: all;
-                box-shadow: 0 4px 15px rgba(185, 171, 141, 0.6);
-                text-align: center;
-              }
-              .footer {
-                background:rgba(181, 224, 255, 0.32);
-                text-align: center;
-                font-size: 12px;
-                color: #777;
-                padding: 15px 20px;
-                border-top: 1px solid rgb(80, 182, 255);
-                font-style: italic;
-              }
-              @media (max-width: 600px) {
-                .container {
-                  margin: 15px;
-                  width: 90%;
-                }
-                .header h1 {
-                  font-size: 22px;
-                }
-                .otp {
-                  font-size: 24px;
-                  padding: 12px 24px;
-                  letter-spacing: 6px;
-                }
-                .content {
-                  padding: 20px 15px;
-                  font-size: 15px;
-                }
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1>Crescent Change</h1>
-                <p>Empowering your charitable journey</p>
-              </div>
-              <div class="content">
-                <p>Assalamu Alaikum ${fullName},</p>
-                <p>Thank you for choosing <strong>Crescent Change</strong> to make a difference. To confirm your recent donation and secure your account, please use the one-time password (OTP) below:</p>
-                <div class="otp">${otp}</div>
-                <p>This OTP is valid for 5 minutes. Please enter it promptly to complete your verification.</p>
-                <p>May Allah bless your generosity and multiply your rewards.</p>
-              </div>
-              <div class="footer">
-                <p>If you did not initiate this request, kindly ignore this email or contact support.</p>
-                <p>© 2025 Crescent Change. All rights reserved.</p>
-              </div>
-            </div>
-          </body>
-          </html>
-  `;
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Smart Brief OTP</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet" />
+  </head>
+  <body style="margin: 0; font-family: 'Poppins', sans-serif; background: #ffffff; font-size: 14px;">
+    <div style="max-width: 680px; margin: 0 auto; padding: 45px 30px 60px; background: #f4f7ff; background-image: url(https://archisketch-resources.s3.ap-northeast-2.amazonaws.com/vrstyler/1661497957196_595865/email-template-background-banner); background-repeat: no-repeat; background-size: 800px 452px; background-position: top center; font-size: 14px; color: #434343;">
+      <header>
+        <table style="width: 100%;">
+          <tbody>
+            <tr>
+              <td>
+                <svg xmlns="http://www.w3.org/2000/svg" height="36" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3v1" />
+                <path d="M12 20v1" />
+                <path d="M3 12h1" />
+                <path d="M20 12h1" />
+                <path d="m18.364 5.636-.707.707" />
+                <path d="m6.343 17.657-.707.707" />
+                <path d="m5.636 5.636.707.707" />
+                <path d="m17.657 17.657.707.707" />
+                <path d="M12 8a4 4 0 0 1 0 8" />
+              </svg>
+              </td>
+              <td style="text-align: right;">
+                <span style="font-size: 16px; line-height: 30px; color: #ffffff;">${new Date().toLocaleDateString()}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </header>
+
+      <main>
+        <div style="margin-top: 70px; padding: 92px 30px 115px; background: #ffffff; border-radius: 30px; text-align: center;">
+          <div style="max-width: 489px; margin: 0 auto;">
+            <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1f1f1f;">One-Time Password (OTP)</h1>
+            <p style="margin-top: 18px; font-size: 16px; font-weight: 500;">Hi ${fullName},</p>
+            <p style="margin-top: 17px; font-weight: 500; letter-spacing: 0.5px;">
+              You requested to verify your Smart Brief account. Use the following OTP to continue. This code is valid for <span style="font-weight: 600; color: #1f1f1f;">5 minutes</span>.
+              Do not share this code with anyone—even Smart Brief staff.
+            </p>
+            <p style="margin-top: 60px; font-size: 40px; font-weight: 600; letter-spacing: 25px; color: #ba3d4f;">
+              ${otp}
+            </p>
+          </div>
+        </div>
+
+        <p style="max-width: 400px; margin: 90px auto 0; text-align: center; font-weight: 500; color: #8c8c8c;">
+          Need help? Contact us at
+          <a href="mailto:support@smartbrief.com" style="color: #499fb6; text-decoration: none;">support@smartbrief.com</a>
+          or visit our
+          <a href="#" target="_blank" style="color: #499fb6; text-decoration: none;">Help Center</a>
+        </p>
+      </main>
+
+      <footer style="max-width: 490px; margin: 30px auto 0; text-align: center; border-top: 1px solid #e6ebf1; padding-top: 30px;">
+        <p style="margin: 0; font-size: 16px; font-weight: 600; color: #434343;">Smart Brief</p>
+        <p style="margin: 8px 0; color: #434343;">123 Innovation Street, Tech City</p>
+        <div style="margin-top: 16px;">
+          <a href="#" target="_blank" style="display: inline-block;">
+            <img width="32px" alt="Facebook" src="https://archisketch-resources.s3.ap-northeast-2.amazonaws.com/vrstyler/1661502815169_682499/email-template-icon-facebook" />
+          </a>
+          <a href="#" target="_blank" style="display: inline-block; margin-left: 8px;">
+            <img width="32px" alt="Instagram" src="https://archisketch-resources.s3.ap-northeast-2.amazonaws.com/vrstyler/1661504218208_684135/email-template-icon-instagram" />
+          </a>
+          <a href="#" target="_blank" style="display: inline-block; margin-left: 8px;">
+            <img width="32px" alt="Twitter" src="https://archisketch-resources.s3.ap-northeast-2.amazonaws.com/vrstyler/1661503043040_372004/email-template-icon-twitter" />
+          </a>
+          <a href="#" target="_blank" style="display: inline-block; margin-left: 8px;">
+            <img width="32px" alt="YouTube" src="https://archisketch-resources.s3.ap-northeast-2.amazonaws.com/vrstyler/1661503195931_210869/email-template-icon-youtube" />
+          </a>
+        </div>
+        <p style="margin-top: 18px; font-size: 12px; color: #888888;">© 2025 Smart Brief. All rights reserved.</p>
+      </footer>
+    </div>
+  </body>
+</html>
+`;
 
     // <img src="cid:steady_hands_logo" alt="Steady Hands Logo">
 
