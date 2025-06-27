@@ -37,7 +37,7 @@ const savePendingUserIntoDB = async (payload: TSignupPayload) => {
     { upsert: true, runValidators: true }
   );
 
-  return null;
+  return { email: payload.email };
 };
 
 const verifyOtpAndSaveUserIntoDB = async (payload: TOtpPayload) => {
@@ -432,7 +432,7 @@ const resetPasswordIntoDB = async (resetToken: string, newPassword: string) => {
   }
 };
 
-export const UserValidation = {
+export const UserService = {
   savePendingUserIntoDB,
   verifyOtpAndSaveUserIntoDB,
   resendOtpAgain,
