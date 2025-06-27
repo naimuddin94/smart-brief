@@ -1,9 +1,9 @@
 /*
- * Title: Rise Mentorship
+ * Title: Smart Brief
  * Description: A Backend Application on Express
  * Author: Md Naim Uddin
  * Github: naimuddin94
- * Date: 13/06/2025
+ * Date: 27/06/2025
  *
  */
 
@@ -25,12 +25,6 @@ app.use(
       'http://10.0.60.43:3001',
       'http://10.0.60.43:3002',
       'http://10.0.60.43:3003',
-      'http://10.0.60.43:3004',
-      'http://10.0.60.43:3005',
-      'http://10.0.60.43:3006',
-      'http://10.0.60.43:3007',
-      'http://10.0.60.43:3008',
-      'http://10.0.60.43:3009',
     ],
   })
 );

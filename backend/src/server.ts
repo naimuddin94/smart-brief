@@ -1,11 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable no-console */
 /*
- * Title: Rise Mentorship
+ * Title: Smart Brief
  * Description: A Backend Application on Express
  * Author: Md Naim Uddin
  * Github: naimuddin94
- * Date: 13/06/2025
+ * Date: 27/06/2025
  *
  */
 import { Server } from 'http';

@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { IPendingUser } from './user.interface';
 import config from '../../config';
 import bcrypt from 'bcryptjs';
+import { OTP_REASON } from './user.constant';
 
 const pendingUserSchema = new mongoose.Schema<IPendingUser>(
   {
@@ -19,6 +20,10 @@ const pendingUserSchema = new mongoose.Schema<IPendingUser>(
       type: String,
       required: [true, 'Please provide a password'],
     },
+    reason: {
+      type: String,
+      default: OTP_REASON.SIGNUP,
+    },
   },
   { timestamps: { createdAt: true } }
 );
@@ -28,13 +33,19 @@ const pendingUserSchema = new mongoose.Schema<IPendingUser>(
 // Modified password fields before save to database
 pendingUserSchema.pre('save', async function (next) {
   try {
-    // Check if the password is modified or this is a new user
     if (this.password && (this.isModified('password') || this.isNew)) {
-      const hashPassword = await bcrypt.hash(
-        this.password,
-        Number(config.bcrypt_salt_rounds)
-      );
-      this.password = hashPassword;
+      const isAlreadyHashed =
+        this.password.startsWith('$2a$') ||
+        this.password.startsWith('$2b$') ||
+        this.password.startsWith('$2y$');
+
+      if (!isAlreadyHashed) {
+        const hashPassword = await bcrypt.hash(
+          this.password,
+          Number(config.bcrypt_salt_rounds)
+        );
+        this.password = hashPassword;
+      }
     }
     next();
   } catch (error: any) {

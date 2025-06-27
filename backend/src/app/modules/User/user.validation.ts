@@ -173,3 +173,4 @@ export type TSignupPayload = z.infer<typeof createSchema.shape.body>;
 export type TSigninPayload = z.infer<typeof signinSchema.shape.body>;
 export type TOtpPayload = z.infer<typeof verifyOtpSchema.shape.body>;
 export type TUpdatePayload = z.infer<typeof updateSchema.shape.body>;
+export type TChangePasswordPayload = z.infer<typeof passwordChangeSchema.shape.body>;

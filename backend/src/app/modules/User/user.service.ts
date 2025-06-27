@@ -2,18 +2,22 @@ import status from 'http-status';
 import { AppError, Logger, sendOtpEmail } from '../../utils';
 import User from './user.model';
 import {
+  TChangePasswordPayload,
   TOtpPayload,
   TSigninPayload,
   TSignupPayload,
   TUpdatePayload,
 } from './user.validation';
-import { generateOtp } from '../../lib';
+import { generateOtp, verifyToken } from '../../lib';
 import PendingUser from './pendingUser.model';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { IUser } from './user.interface';
 import { TSocialLoginPayload } from '../../types';
 import fs from 'fs';
+import { OTP_REASON } from './user.constant';
+import config from '../../config';
+import jwt from 'jsonwebtoken';
 
 const savePendingUserIntoDB = async (payload: TSignupPayload) => {
   const existingUser = await User.findOne({ email: payload.email });
@@ -258,6 +262,176 @@ const safeUnlink = async (filePath: string) => {
   }
 };
 
+const changePasswordIntoDB = async (
+  requestedUser: IUser,
+  payload: TChangePasswordPayload
+) => {
+  const user = await User.findOne({
+    _id: requestedUser._id,
+  }).select('+password');
+
+  if (!user) {
+    throw new AppError(status.NOT_FOUND, 'User not exists!');
+  }
+
+  if (user.isSocialLogin || !user?.password) {
+    throw new AppError(
+      status.BAD_REQUEST,
+      'This account is registered via social login. You can not change your password.'
+    );
+  }
+
+  const isCredentialsCorrect = await bcrypt.compare(
+    payload.oldPassword,
+    user.password
+  );
+
+  if (!isCredentialsCorrect) {
+    throw new AppError(status.UNAUTHORIZED, 'Current password is not correct');
+  }
+
+  user.password = payload.newPassword;
+  await user.save();
+
+  return null;
+};
+
+const forgotPassword = async (email: string) => {
+  const user = await User.findOne({
+    email,
+  });
+
+  if (!user) {
+    throw new AppError(status.NOT_FOUND, 'User not exists!');
+  }
+
+  const otp = generateOtp();
+  await sendOtpEmail(email, otp, user.fullName || 'Guest');
+
+  const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+
+  const { fullName, password } = user;
+
+  await PendingUser.findOneAndUpdate(
+    { email },
+    {
+      email,
+      fullName,
+      password,
+      otp,
+      otpExpiry,
+      reason: OTP_REASON.FORGOT_PASSWORD,
+    },
+    { upsert: true, runValidators: true }
+  );
+
+  return { email };
+};
+
+const verifyOtpForForgetPassword = async (payload: {
+  email: string;
+  otp: string;
+}) => {
+  const user = await PendingUser.findOne({
+    email: payload.email,
+    reason: OTP_REASON.FORGOT_PASSWORD,
+  });
+
+  if (!user) {
+    throw new AppError(status.NOT_FOUND, 'User not exists!');
+  }
+
+  // Check if the OTP matches
+  if (user?.otp !== payload.otp || !user.otpExpiry) {
+    throw new AppError(status.BAD_REQUEST, 'Invalid OTP');
+  }
+
+  // Check if OTP has expired
+  if (Date.now() > new Date(user.otpExpiry).getTime()) {
+    throw new AppError(status.BAD_REQUEST, 'OTP has expired');
+  }
+
+  const resetToken = jwt.sign(
+    {
+      email: user.email,
+      isResetPassword: true,
+    },
+    config.jwt_access_secret!,
+    {
+      expiresIn: '1d',
+    }
+  );
+
+  return { resetToken };
+};
+
+const resetPasswordIntoDB = async (resetToken: string, newPassword: string) => {
+  const { email, isResetPassword } = (await verifyToken(resetToken)) as any;
+
+  const user = await PendingUser.findOne({
+    email,
+    reason: OTP_REASON.FORGOT_PASSWORD,
+  });
+
+  if (!user) {
+    throw new AppError(status.NOT_FOUND, 'User not exists!');
+  }
+
+  // Check if the OTP matches
+  if (!isResetPassword) {
+    throw new AppError(status.BAD_REQUEST, 'Invalid reset password token.');
+  }
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const updatedUser = await User.findOneAndUpdate(
+      { email },
+      { password: newPassword },
+      { session }
+    );
+
+    await PendingUser.findOneAndDelete(
+      {
+        email,
+        reason: OTP_REASON.FORGOT_PASSWORD,
+      },
+      { session }
+    );
+
+    if (!updatedUser) {
+      throw new AppError(
+        status.INTERNAL_SERVER_ERROR,
+        'Something went wrong while updating password'
+      );
+    }
+
+    const accessToken = updatedUser?.generateAccessToken();
+    const refreshToken = updatedUser?.generateRefreshToken();
+
+    updatedUser.refreshToken = refreshToken;
+    await updatedUser.save({ session });
+
+    return {
+      _id: updatedUser._id,
+      name: updatedUser.fullName,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      accessToken,
+      refreshToken,
+    };
+  } catch (error: any) {
+    await session.abortTransaction();
+    throw new AppError(
+      status.INTERNAL_SERVER_ERROR,
+      error?.message || 'Something went wrong updating new password'
+    );
+  } finally {
+    await session.endSession();
+  }
+};
+
 export const UserValidation = {
   savePendingUserIntoDB,
   verifyOtpAndSaveUserIntoDB,
@@ -266,4 +440,8 @@ export const UserValidation = {
   socialLoginServices,
   signoutFromDB,
   updateProfileIntoDB,
+  changePasswordIntoDB,
+  forgotPassword,
+  verifyOtpForForgetPassword,
+  resetPasswordIntoDB,
 };

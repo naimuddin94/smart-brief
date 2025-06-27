@@ -14,3 +14,10 @@ export const PROVIDER = {
 } as const;
 
 export type TProvider = (typeof PROVIDER)[keyof typeof PROVIDER];
+
+export const OTP_REASON = {
+  SIGNUP: 'signup',
+  FORGOT_PASSWORD: 'forgot_password',
+} as const;
+
+export type TOtpReason = (typeof OTP_REASON)[keyof typeof OTP_REASON];

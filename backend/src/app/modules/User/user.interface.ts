@@ -1,5 +1,5 @@
 import { Document, Types } from 'mongoose';
-import { TProvider, TRole } from './user.constant';
+import { TOtpReason, TProvider, TRole } from './user.constant';
 
 export interface IPendingUser extends Document {
   fullName: string;
@@ -7,6 +7,7 @@ export interface IPendingUser extends Document {
   password: string;
   otp: string | null;
   otpExpiry: Date | null;
+  reason: TOtpReason;
   createdAt: Date;
   generateAccessToken(): string;
   generateRefreshToken(): string;
