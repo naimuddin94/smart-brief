@@ -5,8 +5,7 @@ dotenv.config({ path: path.join((process.cwd(), '.env')) });
 
 export default {
   NODE_ENV: process.env.NODE_ENV,
-  gemini_api_key: process.env.GEMINI_API_KEY,
-  open_ai_key: process.env.OPENAI_API_KEY,
+  github_token: process.env.GITHUB_TOKEN,
   redis_url: process.env.REDIS_URL,
   port: process.env.PORT,
   db_url: process.env.DB_URL,

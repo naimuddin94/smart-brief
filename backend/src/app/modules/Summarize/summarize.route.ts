@@ -7,6 +7,6 @@ const router = express.Router();
 
 router
   .route('/')
-  .post(auth(), upload.single('file'), SummarizeController.summarizeFile);
+  .post(auth(), SummarizeController.summarizeFile);
 
 export const SummarizeRoutes = router;
