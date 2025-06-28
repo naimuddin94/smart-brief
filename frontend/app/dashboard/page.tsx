@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import {
-  Sparkles,
   CreditCard,
   FileText,
   Upload,
@@ -197,7 +196,7 @@ export default function DashboardPage() {
                   Quick Actions
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="flex flex-col gap-2 ">
                 <Link href="/summarize">
                   <motion.div
                     whileHover={{ scale: 1.02 }}
@@ -210,7 +209,7 @@ export default function DashboardPage() {
                   </motion.div>
                 </Link>
 
-                <Link href="/upload">
+                <Link href="/summarize">
                   <motion.div
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}

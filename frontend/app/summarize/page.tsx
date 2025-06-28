@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, ChangeEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText,
@@ -11,8 +11,6 @@ import {
   RefreshCw,
   ArrowLeft,
   Sparkles,
-  Clock,
-  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +28,10 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import mammoth from "mammoth";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+import { useGetSummaryMutation } from "@/redux/features/summarize/summarizeApi";
+import { toast } from "sonner";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -38,15 +40,18 @@ const fadeInUp = {
 };
 
 export default function SummarizePage() {
-  const [inputText, setInputText] = useState("");
-  const [summaryLength, setSummaryLength] = useState([30]);
-  const [summaryType, setSummaryType] = useState("balanced");
-  const [isLoading, setIsLoading] = useState(false);
-  const [summary, setSummary] = useState("");
-  const [showSummary, setShowSummary] = useState(false);
-  const [wordCount, setWordCount] = useState(0);
+  const [inputText, setInputText] = useState<string>("");
+  const [summaryLength, setSummaryLength] = useState<number[]>([30]);
+  const [summaryType, setSummaryType] = useState<string>("balanced");
+  const [summary, setSummary] = useState<string>("");
+  const [showSummary, setShowSummary] = useState<boolean>(false);
+  const [wordCount, setWordCount] = useState<number>(0);
+  const [summaryWordCount, setSummaryWordCount] = useState<number>(0);
+  const [reducedTime, setReducedTime] = useState<number>(0);
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [copied, setCopied] = useState<boolean>(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleTextChange = (text: string) => {
     setInputText(text);
@@ -58,7 +63,7 @@ export default function SummarizePage() {
     );
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -75,55 +80,71 @@ export default function SummarizePage() {
         const result = await mammoth.extractRawText({ arrayBuffer });
         handleTextChange(result.value || "");
       } catch (error) {
-        alert("Failed to read .docx file.");
+        toast.error("Failed to read .docx file.");
       }
     } else {
-      alert("Unsupported file type. Only .txt and .docx files are allowed.");
+      toast.error(
+        "Unsupported file type. Only .txt and .docx files are allowed."
+      );
     }
 
-    // Reset input so user can upload the same file again if needed
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
   const triggerFileSelect = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
+    fileInputRef.current?.click();
   };
+
+  const [summarizeFn, { isLoading }] = useGetSummaryMutation();
 
   const handleSummarize = async () => {
     if (!inputText.trim()) return;
-    setIsLoading(true);
-
-    // Simulated API call (replace with real summarization call)
-    setTimeout(() => {
-      const mockSummary =
-        "This is a mock summary of your content. It highlights the core points from your document.";
-      setSummary(mockSummary);
-      setShowSummary(true);
-      setIsLoading(false);
-    }, 3000);
+    setShowSummary(false);
+    summarizeFn(inputText.trim())
+      .unwrap()
+      .then((res) => {
+        if (res?.success) {
+          toast.success(res?.message);
+          setSummary(res.data?.summary);
+          setWordCount(res.data?.totalContentWordCount);
+          setSummaryWordCount(res.data?.summaryWordCount);
+          setReducedTime(res.data?.reduceTime);
+          setShowSummary(true);
+        }
+      })
+      .catch((err) => {
+        toast.error(err?.data?.message || "Something went wrong!");
+      });
   };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(summary);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 700);
   };
 
-  const handleRegenerate = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      const altSummary =
-        "This is a regenerated version focusing on alternate key points from the original text.";
-      setSummary(altSummary);
-      setIsLoading(false);
-    }, 2000);
+  const handleExport = async (type: "txt" | "docx") => {
+    if (type === "txt") {
+      const blob = new Blob([summary], {
+        type: "text/plain;charset=utf-8",
+      });
+      saveAs(blob, "summary.txt");
+    } else if (type === "docx") {
+      const zip = new JSZip();
+      zip.file(
+        "word/document.xml",
+        `<w:document><w:body><w:p><w:r><w:t>${summary}</w:t></w:r></w:p></w:body></w:document>`
+      );
+      zip.generateAsync({ type: "blob" }).then((content) => {
+        saveAs(content, "summary.docx");
+      });
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -165,7 +186,6 @@ export default function SummarizePage() {
         </motion.div>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Input Section */}
           <motion.div variants={fadeInUp} initial="initial" animate="animate">
             <Card>
               <CardHeader>
@@ -175,7 +195,6 @@ export default function SummarizePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Textarea */}
                 <div className="space-y-2">
                   <Label htmlFor="content">Paste your content here</Label>
                   <Textarea
@@ -191,13 +210,11 @@ export default function SummarizePage() {
                   </div>
                 </div>
 
-                {/* File Upload */}
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
                   <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-gray-600 mb-2">
                     Or upload a document
                   </p>
-
                   <input
                     type="file"
                     accept=".txt,.docx"
@@ -205,7 +222,6 @@ export default function SummarizePage() {
                     className="hidden"
                     onChange={handleFileChange}
                   />
-
                   <button
                     type="button"
                     onClick={triggerFileSelect}
@@ -213,13 +229,11 @@ export default function SummarizePage() {
                   >
                     Choose File
                   </button>
-
                   <p className="text-xs text-gray-500 mt-2">
                     Supports .txt, .docx files up to 10MB
                   </p>
                 </div>
 
-                {/* Summary Options */}
                 <div className="space-y-4">
                   <Label>Summary Type</Label>
                   <Select value={summaryType} onValueChange={setSummaryType}>
@@ -253,13 +267,12 @@ export default function SummarizePage() {
                 >
                   {isLoading ? (
                     <>
-                      <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                      <RefreshCw className="h-5 w-5 mr-2 animate-spin" />{" "}
                       Generating...
                     </>
                   ) : (
                     <>
-                      <Wand2 className="h-5 w-5 mr-2" />
-                      Generate Summary
+                      <Wand2 className="h-5 w-5 mr-2" /> Generate Summary
                     </>
                   )}
                 </Button>
@@ -267,7 +280,6 @@ export default function SummarizePage() {
             </Card>
           </motion.div>
 
-          {/* Output Section */}
           <motion.div variants={fadeInUp} initial="initial" animate="animate">
             <Card>
               <CardHeader>
@@ -279,10 +291,31 @@ export default function SummarizePage() {
                   {showSummary && (
                     <div className="flex space-x-2">
                       <Button variant="outline" size="sm" onClick={handleCopy}>
-                        <Copy className="h-4 w-4 mr-1" /> Copy
+                        <div className="flex items-center">
+                          <motion.span
+                            animate={
+                              copied
+                                ? {
+                                    scale: [1, 1.4, 1],
+                                    color: ["#000000", "#3b82f6", "#000000"],
+                                  } // black → blue → black
+                                : { scale: 1, color: "#000000" }
+                            }
+                            transition={{ duration: 0.5 }}
+                            className="mr-1"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </motion.span>
+                          Copy
+                        </div>
                       </Button>
-                      <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-1" /> Export
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleExport("txt")}
+                      >
+                        Download
                       </Button>
                     </div>
                   )}
@@ -298,11 +331,10 @@ export default function SummarizePage() {
                       exit={{ opacity: 0 }}
                       className="text-center py-16"
                     >
-                      <Sparkles className="h-8 w-8 text-blue-600 animate-pulse mx-auto mb-4" />
-                      <p className="text-gray-600">
-                        Analyzing your content. Please wait...
+                      <RefreshCw className="h-12 w-12 text-blue-600 animate-spin mx-auto mb-6" />
+                      <p className="text-gray-600 text-lg font-medium">
+                        Summarizing your content, hang tight...
                       </p>
-                      <Progress value={70} className="w-48 mx-auto mt-4" />
                     </motion.div>
                   )}
 
@@ -319,13 +351,16 @@ export default function SummarizePage() {
                           {summary}
                         </p>
                       </div>
-                      <div className="flex gap-3">
-                        <Button variant="outline" onClick={handleRegenerate}>
-                          <RefreshCw className="h-4 w-4 mr-2" /> Regenerate
-                        </Button>
-                        <Button>
-                          <Download className="h-4 w-4 mr-2" /> Save Summary
-                        </Button>
+                      <div className="text-sm text-gray-600 space-y-1">
+                        <p>
+                          <strong>Total Words:</strong> {wordCount}
+                        </p>
+                        <p>
+                          <strong>Summary Words:</strong> {summaryWordCount}
+                        </p>
+                        <p>
+                          <strong>Time Saved:</strong> ~{reducedTime} mins
+                        </p>
                       </div>
                     </motion.div>
                   )}
