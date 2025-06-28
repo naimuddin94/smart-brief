@@ -9,6 +9,20 @@ const authApi = baseApi.injectEndpoints({
         body: newUser,
       }),
     }),
+    verifyOtp: builder.mutation({
+      query: (data) => ({
+        url: "/auth/verify-signup-otp",
+        method: "POST",
+        body: data,
+      }),
+    }),
+    resendOtp: builder.mutation({
+      query: (email) => ({
+        url: "/auth/resend",
+        method: "POST",
+        body: { email },
+      }),
+    }),
     login: builder.mutation({
       query: (credentials) => ({
         url: "/auth/signin",
@@ -26,5 +40,10 @@ const authApi = baseApi.injectEndpoints({
   }),
 });
 
-export const { useRegisterMutation, useLoginMutation, useLogoutMutation } =
-  authApi;
+export const {
+  useRegisterMutation,
+  useVerifyOtpMutation,
+  useResendOtpMutation,
+  useLoginMutation,
+  useLogoutMutation,
+} = authApi;

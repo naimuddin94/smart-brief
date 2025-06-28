@@ -21,6 +21,7 @@ import { registerSchema, type RegisterFormData } from "@/lib/validations/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRegisterMutation } from "@/redux/features/auth/authApi";
+import { toast } from "sonner";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -37,7 +38,7 @@ export default function RegisterPage() {
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      name: "",
+      fullName: "",
       email: "",
       role: "user",
       password: "",
@@ -53,12 +54,15 @@ export default function RegisterPage() {
     try {
       // Handle registration logic here
       registerFn(data)
+        .unwrap()
         .then((res) => {
-          console.log(res);
-          router.push(`/verify-otp?email=${encodeURIComponent(data.email)}`);
+          if (res?.success) {
+            router.push(`/verify-otp?email=${encodeURIComponent(data.email)}`);
+            toast.success(res?.message);
+          }
         })
         .catch((err) => {
-          console.log(err);
+          toast.error(err?.data?.message || "Something went wrong!");
         });
     } catch (error) {
       console.error("Registration error:", error);
@@ -109,7 +113,7 @@ export default function RegisterPage() {
                 >
                   <FormField
                     control={form.control}
-                    name="name"
+                    name="fullName"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Full Name</FormLabel>

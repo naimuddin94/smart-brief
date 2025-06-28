@@ -85,7 +85,14 @@ const verifyOtpAndSaveUserIntoDB = async (payload: TOtpPayload) => {
 
     await session.commitTransaction();
 
-    return { accessToken, refreshToken, fullName, email, _id: user._id };
+    return {
+      accessToken,
+      refreshToken,
+      fullName,
+      email,
+      _id: user._id,
+      role: user.role,
+    };
   } catch (error: any) {
     await session.abortTransaction();
     throw new AppError(

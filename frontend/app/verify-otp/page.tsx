@@ -20,6 +20,12 @@ import {
 } from "@/components/ui/form";
 import { otpSchema, type OTPFormData } from "@/lib/validations/auth";
 import Link from "next/link";
+import {
+  useResendOtpMutation,
+  useVerifyOtpMutation,
+} from "@/redux/features/auth/authApi";
+import { toast } from "sonner";
+import { setUser } from "@/redux/features/auth/authSlice";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -31,8 +37,6 @@ export default function VerifyOTPPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
-  const [isLoading, setIsLoading] = useState(false);
-  const [isResending, setIsResending] = useState(false);
   const [timer, setTimer] = useState(300); // 5 minutes
   const [isVerified, setIsVerified] = useState(false);
   const [error, setError] = useState("");
@@ -62,46 +66,55 @@ export default function VerifyOTPPage() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const [verifyOtpFN, { isLoading }] = useVerifyOtpMutation();
+
   const onSubmit = async (data: OTPFormData) => {
-    setIsLoading(true);
-    setError("");
-    try {
-      console.log({ otp: data.otp });
+    if (!email) return;
 
-      // Success animation
-      setIsVerified(true);
+    verifyOtpFN({ email, otp: data?.otp })
+      .unwrap()
+      .then((res) => {
+        console.log(res);
+        if (res?.success) {
+          const user = {
+            userId: res?.data?._id,
+            name: res?.data?.fullName,
+            role: res?.data?.role,
+            email: res?.data?.email,
+          };
+          setUser({ token: res?.data?.accessToken, user });
+          toast.success(res?.message);
+          setIsVerified(true);
+          form.reset();
 
-      // Redirect after success animation
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 1500);
-    } catch (err: any) {
-      setError(err.message || "Invalid OTP code");
-      form.reset();
-    } finally {
-      setIsLoading(false);
-    }
+          // Redirect after success animation
+          setTimeout(() => {
+            router.push("/dashboard");
+          }, 1000);
+        }
+      })
+      .catch((err) => {
+        toast.error(err?.data?.message || "Something went wrong!");
+        setTimer(0);
+      });
   };
 
-  const resendOTP = async () => {
-    setIsResending(true);
-    setError("");
-    try {
-      const response = await fetch("/api/auth/resend-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
+  const [resendFN, { isLoading: isResending }] = useResendOtpMutation();
 
-      if (response.ok) {
-        setTimer(300); // Reset timer
-        form.reset();
-      }
-    } catch (err) {
-      setError("Failed to resend OTP");
-    } finally {
-      setIsResending(false);
-    }
+  const resendOTP = async () => {
+    resendFN(email)
+      .unwrap()
+      .then((res) => {
+        console.log(res);
+        if (res?.success) {
+          toast.success(res?.message);
+          setTimer(300); // Reset timer
+          form.reset();
+        }
+      })
+      .catch((err) => {
+        toast.error(err?.data?.message || "Something went wrong!");
+      });
   };
 
   // Handle individual digit input
