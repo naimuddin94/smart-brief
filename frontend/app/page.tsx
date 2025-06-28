@@ -1,18 +1,19 @@
 "use client";
 
 import { motion } from "framer-motion";
-import {
-  Sparkles,
-  Zap,
-  Shield,
-  Users,
-  ArrowRight,
-  CheckCircle,
-  Brain,
-} from "lucide-react";
+import { Sparkles, ArrowRight, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
+import Logo from "@/components/shared/Logo";
+import { currentUser, removeUser } from "@/redux/features/auth/authSlice";
+import { useAppSelector } from "@/redux/hooks";
+import { adminNavItems, features, plans, userNavItems } from "@/constants";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useEffect, useState } from "react";
+import { useLogoutMutation } from "@/redux/features/auth/authApi";
+import { toast } from "sonner";
+import { useDispatch } from "react-redux";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 60 },
@@ -28,65 +29,35 @@ const staggerContainer = {
   },
 };
 
-const features = [
-  {
-    icon: Brain,
-    title: "AI-Powered Summarization",
-    description:
-      "Advanced AI technology to create concise, accurate summaries from your content",
-  },
-  {
-    icon: Zap,
-    title: "Lightning Fast",
-    description:
-      "Get your summaries in seconds, not minutes. Optimized for speed and efficiency",
-  },
-  {
-    icon: Shield,
-    title: "Secure & Private",
-    description:
-      "Your content is protected with enterprise-grade security and privacy measures",
-  },
-  {
-    icon: Users,
-    title: "Team Collaboration",
-    description:
-      "Share and collaborate on summaries with your team members seamlessly",
-  },
-];
-
-const plans = [
-  {
-    name: "Free",
-    price: "$0",
-    credits: "5 credits",
-    features: ["Basic summarization", "Text input only", "Standard support"],
-  },
-  {
-    name: "Pro",
-    price: "$19",
-    credits: "100 credits",
-    features: [
-      "Advanced AI models",
-      "File uploads",
-      "Priority support",
-      "Team sharing",
-    ],
-  },
-  {
-    name: "Enterprise",
-    price: "$99",
-    credits: "Unlimited",
-    features: [
-      "Custom AI models",
-      "API access",
-      "24/7 support",
-      "Advanced analytics",
-    ],
-  },
-];
-
 export default function HomePage() {
+  const dispatch = useDispatch();
+  const user = useAppSelector(currentUser);
+  const [navItems, setNavItems] = useState(userNavItems);
+
+  useEffect(() => {
+    if (user?.role === "admin") {
+      setNavItems(adminNavItems);
+    } else {
+      setNavItems(userNavItems);
+    }
+  }, [user]);
+
+  const [logoutFn] = useLogoutMutation();
+
+  const handleLogout = () => {
+    logoutFn({})
+      .unwrap()
+      .then((res) => {
+        if (res?.success) {
+          dispatch(removeUser());
+          toast.success(res?.message);
+        }
+      })
+      .catch((err) => {
+        toast.error(err?.data?.message || "Something went wrong!");
+      });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Navigation */}
@@ -96,49 +67,41 @@ export default function HomePage() {
         transition={{ duration: 0.6 }}
         className="container mx-auto px-4 py-6 flex justify-between items-center"
       >
-        <div className="flex items-center space-x-2">
-          <Sparkles className="h-8 w-8 text-blue-600" />
-          <span className="text-2xl font-bold text-gray-900">SmartBrief</span>
-        </div>
+        <Logo />
         <div className="hidden md:flex items-center space-x-6">
-          <Link
-            href="/features"
-            className="text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            Features
-          </Link>
-          <Link
-            href="/pricing"
-            className="text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            Pricing
-          </Link>
-          <Link
-            href="/demo"
-            className="text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            Demo
-          </Link>
-          <Link
-            href="/contact"
-            className="text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            Contact
-          </Link>
-          <Link
-            href="/admin/users"
-            className="text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            User Management
-          </Link>
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              {item.name}
+            </Link>
+          ))}
         </div>
         <div className="flex items-center space-x-4">
-          <Link href="/login">
-            <Button variant="ghost">Login</Button>
-          </Link>
-          <Link href="/register">
-            <Button>Get Started</Button>
-          </Link>
+          {user ? (
+            <>
+              <Button variant="outline" onClick={handleLogout}>
+                Logout
+              </Button>
+              <Avatar>
+                {/* <AvatarImage src={} /> */}
+                <AvatarFallback>
+                  {user?.name.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            </>
+          ) : (
+            <>
+              <Link href="/login">
+                <Button variant="ghost">Login</Button>
+              </Link>
+              <Link href="/register">
+                <Button>Get Started</Button>
+              </Link>
+            </>
+          )}
         </div>
       </motion.nav>
 

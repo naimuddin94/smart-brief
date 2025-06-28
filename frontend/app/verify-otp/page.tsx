@@ -26,6 +26,7 @@ import {
 } from "@/redux/features/auth/authApi";
 import { toast } from "sonner";
 import { setUser } from "@/redux/features/auth/authSlice";
+import { useDispatch } from "react-redux";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -35,6 +36,7 @@ const fadeInUp = {
 
 export default function VerifyOTPPage() {
   const router = useRouter();
+  const dispatch = useDispatch();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
   const [timer, setTimer] = useState(300); // 5 minutes
@@ -74,7 +76,6 @@ export default function VerifyOTPPage() {
     verifyOtpFN({ email, otp: data?.otp })
       .unwrap()
       .then((res) => {
-        console.log(res);
         if (res?.success) {
           const user = {
             userId: res?.data?._id,
@@ -82,7 +83,8 @@ export default function VerifyOTPPage() {
             role: res?.data?.role,
             email: res?.data?.email,
           };
-          setUser({ token: res?.data?.accessToken, user });
+          const token = res?.data?.accessToken;
+          dispatch(setUser({ user, token }));
           toast.success(res?.message);
           setIsVerified(true);
           form.reset();

@@ -1,27 +1,40 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { motion } from "framer-motion"
-import { Sparkles, Eye, EyeOff, Mail, Lock } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { loginSchema, type LoginFormData } from "@/lib/validations/auth"
-import Link from "next/link"
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { motion } from "framer-motion";
+import { Sparkles, Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { loginSchema, type LoginFormData } from "@/lib/validations/auth";
+import Link from "next/link";
+import { useLoginMutation } from "@/redux/features/auth/authApi";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { setUser } from "@/redux/features/auth/authSlice";
+import { useDispatch } from "react-redux";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.5, ease: "easeOut" },
-}
+};
 
 export default function LoginPage() {
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter();
+  const dispatch = useDispatch();
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -30,22 +43,31 @@ export default function LoginPage() {
       password: "",
       rememberMe: false,
     },
-  })
+  });
+
+  const [loginFn, { isLoading }] = useLoginMutation();
 
   const onSubmit = async (data: LoginFormData) => {
-    setIsLoading(true)
-    try {
-      // Handle login logic here
-      console.log("Login attempt:", data)
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      // Redirect to dashboard on success
-    } catch (error) {
-      console.error("Login error:", error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    loginFn(data)
+      .unwrap()
+      .then((res) => {
+        if (res?.success) {
+          toast.success(res?.message);
+          const user = {
+            userId: res?.data?._id,
+            name: res?.data?.fullName,
+            role: res?.data?.role,
+            email: res?.data?.email,
+          };
+          const token = res?.data?.accessToken;
+          dispatch(setUser({ user, token }));
+          router.push("/dashboard");
+        }
+      })
+      .catch((err) => {
+        toast.error(err?.data?.message || "Something went wrong!");
+      });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
@@ -56,22 +78,39 @@ export default function LoginPage() {
         className="w-full max-w-md"
       >
         {/* Logo */}
-        <motion.div variants={fadeInUp} initial="initial" animate="animate" className="text-center mb-8">
+        <motion.div
+          variants={fadeInUp}
+          initial="initial"
+          animate="animate"
+          className="text-center mb-8"
+        >
           <Link href="/" className="inline-flex items-center space-x-2">
             <Sparkles className="h-10 w-10 text-blue-600" />
             <span className="text-3xl font-bold text-gray-900">SmartBrief</span>
           </Link>
         </motion.div>
 
-        <motion.div variants={fadeInUp} initial="initial" animate="animate" transition={{ delay: 0.1 }}>
+        <motion.div
+          variants={fadeInUp}
+          initial="initial"
+          animate="animate"
+          transition={{ delay: 0.1 }}
+        >
           <Card className="shadow-xl border-0">
             <CardHeader className="text-center pb-4">
-              <CardTitle className="text-2xl font-bold text-gray-900">Welcome Back</CardTitle>
-              <p className="text-gray-600 mt-2">Sign in to your SmartBrief account</p>
+              <CardTitle className="text-2xl font-bold text-gray-900">
+                Welcome Back
+              </CardTitle>
+              <p className="text-gray-600 mt-2">
+                Sign in to your SmartBrief account
+              </p>
             </CardHeader>
             <CardContent className="space-y-6">
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-4"
+                >
                   <FormField
                     control={form.control}
                     name="email"
@@ -81,7 +120,11 @@ export default function LoginPage() {
                         <FormControl>
                           <div className="relative">
                             <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                            <Input placeholder="Enter your email" className="pl-10" {...field} />
+                            <Input
+                              placeholder="Enter your email"
+                              className="pl-10"
+                              {...field}
+                            />
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -109,7 +152,11 @@ export default function LoginPage() {
                               onClick={() => setShowPassword(!showPassword)}
                               className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
                             >
-                              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                              {showPassword ? (
+                                <EyeOff className="h-5 w-5" />
+                              ) : (
+                                <Eye className="h-5 w-5" />
+                              )}
                             </button>
                           </div>
                         </FormControl>
@@ -125,21 +172,36 @@ export default function LoginPage() {
                       render={({ field }) => (
                         <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                           <FormControl>
-                            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
                           </FormControl>
                           <div className="space-y-1 leading-none">
-                            <FormLabel className="text-sm font-normal cursor-pointer">Remember me</FormLabel>
+                            <FormLabel className="text-sm font-normal cursor-pointer">
+                              Remember me
+                            </FormLabel>
                           </div>
                         </FormItem>
                       )}
                     />
-                    <Link href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-800">
+                    <Link
+                      href="/forgot-password"
+                      className="text-sm text-blue-600 hover:text-blue-800"
+                    >
                       Forgot password?
                     </Link>
                   </div>
 
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Button type="submit" className="w-full" disabled={isLoading}>
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={isLoading}
+                    >
                       {isLoading ? "Signing in..." : "Sign In"}
                     </Button>
                   </motion.div>
@@ -151,7 +213,9 @@ export default function LoginPage() {
                   <div className="w-full border-t border-gray-300" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                  <span className="px-2 bg-white text-gray-500">
+                    Or continue with
+                  </span>
                 </div>
               </div>
 
@@ -178,7 +242,11 @@ export default function LoginPage() {
                   Google
                 </Button>
                 <Button variant="outline" className="w-full">
-                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                  <svg
+                    className="w-5 h-5 mr-2"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                   </svg>
                   Facebook
@@ -188,7 +256,10 @@ export default function LoginPage() {
               <div className="text-center">
                 <p className="text-sm text-gray-600">
                   Don't have an account?{" "}
-                  <Link href="/register" className="text-blue-600 hover:text-blue-800 font-medium">
+                  <Link
+                    href="/register"
+                    className="text-blue-600 hover:text-blue-800 font-medium"
+                  >
                     Sign up
                   </Link>
                 </p>
@@ -198,5 +269,5 @@ export default function LoginPage() {
         </motion.div>
       </motion.div>
     </div>
-  )
+  );
 }

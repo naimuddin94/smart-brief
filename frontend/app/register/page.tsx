@@ -50,23 +50,17 @@ export default function RegisterPage() {
   const [registerFn, { isLoading }] = useRegisterMutation();
 
   const onSubmit = async (data: RegisterFormData) => {
-    // setIsLoading(true);
-    try {
-      // Handle registration logic here
-      registerFn(data)
-        .unwrap()
-        .then((res) => {
-          if (res?.success) {
-            router.push(`/verify-otp?email=${encodeURIComponent(data.email)}`);
-            toast.success(res?.message);
-          }
-        })
-        .catch((err) => {
-          toast.error(err?.data?.message || "Something went wrong!");
-        });
-    } catch (error) {
-      console.error("Registration error:", error);
-    }
+    registerFn(data)
+      .unwrap()
+      .then((res) => {
+        if (res?.success) {
+          router.push(`/verify-otp?email=${encodeURIComponent(data.email)}`);
+          toast.success(res?.message);
+        }
+      })
+      .catch((err) => {
+        toast.error(err?.data?.message || "Something went wrong!");
+      });
   };
 
   return (

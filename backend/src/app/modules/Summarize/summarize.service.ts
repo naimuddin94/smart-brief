@@ -10,7 +10,7 @@ import { AzureKeyCredential } from '@azure/core-auth';
 const redis = createClient({ url: process.env.REDIS_URL });
 redis.connect().catch((err) => Logger.error('Redis connection error:', err));
 
-// Helper function to hash content
+// Hash text content for caching
 const hashContent = (text: string) =>
   crypto.createHash('sha256').update(text).digest('hex');
 
@@ -24,11 +24,15 @@ const summarizeFromText = async (text: string) => {
 
   const contentHash = hashContent(text);
 
+  // Check Redis cache
   try {
-    const cachedSummary = await redis.get(contentHash);
-    if (cachedSummary) {
+    const cached = await redis.get(contentHash);
+    if (cached) {
       Logger.info('Cache hit: Returning cached summary');
-      return { summary: cachedSummary, cached: true };
+      return {
+        ...JSON.parse(cached),
+        cached: true,
+      };
     }
   } catch (err) {
     Logger.error('Redis get error:', err);
@@ -44,12 +48,34 @@ const summarizeFromText = async (text: string) => {
       messages: [
         {
           role: 'user',
-          content: `Summarize the following content:\n\n${text}`,
+          content: `
+            Summarize the content below and return a strict JSON object.
+
+            Instructions:
+            1. Summarize the content in 2–3 clear sentences.
+            2. Count the total words in the original content.
+            3. Count the words in the summary.
+            4. Estimate reading time saved (assume 100 words per minute).
+            5. Return only the following JSON object (do not stringify it, and do not wrap inside another object):
+
+            {
+              "summary": "string",
+              "totalContentWordCount": number,
+              "summaryWordCount": number,
+              "reduceTime": number
+            }
+
+            Content:
+            """
+            ${text}
+            """
+            Only return the JSON object above. Do not include explanations or formatting.
+          `,
         },
       ],
-      temperature: 1,
+      temperature: 0.7,
       top_p: 1,
-      model: model,
+      model,
     },
   });
 
@@ -60,16 +86,39 @@ const summarizeFromText = async (text: string) => {
     throw new AppError(status.INTERNAL_SERVER_ERROR, errorMessage);
   }
 
-  const summary = response.body.choices[0].message.content;
+  const resultText = response.body.choices[0].message.content?.trim();
+
+  let summaryObj: {
+    summary: string;
+    totalContentWordCount: number;
+    summaryWordCount: number;
+    reduceTime: number;
+  };
 
   try {
-    await redis.set(contentHash, summary!, { EX: 60 * 60 * 24 });
+    summaryObj = JSON.parse(resultText!);
+  } catch (err) {
+    Logger.error('Failed to parse JSON summary:', resultText);
+    throw new AppError(
+      status.INTERNAL_SERVER_ERROR,
+      'Invalid JSON format returned by model.'
+    );
+  }
+
+  // Store in Redis
+  try {
+    await redis.set(contentHash, JSON.stringify(summaryObj), {
+      EX: 60 * 60 * 24,
+    });
     Logger.info('Summary cached in Redis');
   } catch (err) {
     Logger.error('Redis set error:', err);
   }
 
-  return { summary, cached: false };
+  return {
+    ...summaryObj,
+    cached: false,
+  };
 };
 
 export const SummarizeService = {
