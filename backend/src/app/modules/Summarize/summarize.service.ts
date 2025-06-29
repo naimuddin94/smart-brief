@@ -1,3 +1,4 @@
+import { IUser } from './../User/user.interface';
 import status from 'http-status';
 import { AppError, Logger } from '../../utils';
 import crypto from 'crypto';
@@ -5,6 +6,7 @@ import { createClient } from 'redis';
 import config from '../../config';
 import ModelClient, { isUnexpected } from '@azure-rest/ai-inference';
 import { AzureKeyCredential } from '@azure/core-auth';
+import User from '../User/user.model';
 
 // Redis Client Setup
 const redis = createClient({ url: process.env.REDIS_URL });
@@ -17,16 +19,21 @@ const hashContent = (text: string) =>
 const endpoint = 'https://models.github.ai/inference';
 const model = 'openai/gpt-4.1';
 
-const summarizeFromText = async (text: string) => {
-  if (!text || typeof text !== 'string') {
+const summarizeFromText = async (
+  user: IUser,
+  payload: { content: string; type: string }
+) => {
+  const { content, type } = payload;
+
+  if (!content || typeof content !== 'string') {
     throw new AppError(status.BAD_REQUEST, 'Invalid or empty text input');
   }
 
-  const contentHash = hashContent(text);
+  const contentHash = hashContent(content.trim());
 
   // Check Redis cache
   try {
-    const cached = await redis.get(contentHash);
+    const cached = await redis.get(`${contentHash}-${type}`);
     if (cached) {
       Logger.info('Cache hit: Returning cached summary');
       return {
@@ -49,28 +56,26 @@ const summarizeFromText = async (text: string) => {
         {
           role: 'user',
           content: `
-            Summarize the content below and return a strict JSON object.
+      You are an AI assistant.
 
-            Instructions:
-            1. Summarize the content in 2–3 clear sentences.
-            2. Count the total words in the original content.
-            3. Count the words in the summary.
-            4. Estimate reading time saved (assume 100 words per minute).
-            5. Return only the following JSON object (do not stringify it, and do not wrap inside another object):
+      Task:
+      - Summarize the following content as effectively as possible.
+      - Adapt the tone/style based on: "${type}".
+      - Extract 3 relevant tags or keywords.
+      - Return the following JSON object:
 
-            {
-              "summary": "string",
-              "totalContentWordCount": number,
-              "summaryWordCount": number,
-              "reduceTime": number
-            }
+      {
+        "summary": "string",
+        "tags": ["tag1", "tag2", "tag3"],
+      }
 
-            Content:
-            """
-            ${text}
-            """
-            Only return the JSON object above. Do not include explanations or formatting.
-          `,
+      Content:
+      """
+      ${content}
+      """
+
+      Return only the JSON object shown above. Do not include any other explanation or formatting.
+        `.trim(),
         },
       ],
       temperature: 0.7,
@@ -90,9 +95,12 @@ const summarizeFromText = async (text: string) => {
 
   let summaryObj: {
     summary: string;
+    tags: string[];
+    type: string;
     totalContentWordCount: number;
     summaryWordCount: number;
     reduceTime: number;
+    reduction: number;
   };
 
   try {
@@ -105,15 +113,28 @@ const summarizeFromText = async (text: string) => {
     );
   }
 
+  const wordCount = content.split(' ').length;
+  const summaryWordCount = summaryObj.summary.split(' ').length;
+
+  summaryObj.type = type;
+  summaryObj.totalContentWordCount = wordCount;
+  summaryObj.summaryWordCount = summaryWordCount;
+  summaryObj.reduceTime = Math.round((wordCount - summaryWordCount) / 100);
+  summaryObj.reduction = Math.round(
+    ((wordCount - summaryWordCount) / wordCount) * 100
+  );
+
   // Store in Redis
   try {
-    await redis.set(contentHash, JSON.stringify(summaryObj), {
+    await redis.set(`${contentHash}-${type}`, JSON.stringify(summaryObj), {
       EX: 60 * 60 * 24,
     });
     Logger.info('Summary cached in Redis');
   } catch (err) {
     Logger.error('Redis set error:', err);
   }
+
+  await User.findByIdAndUpdate(user._id, { $inc: { credits: -1 } });
 
   return {
     ...summaryObj,

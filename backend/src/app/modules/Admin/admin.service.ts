@@ -1,3 +1,4 @@
+import { IUser } from './../User/user.interface';
 import status from 'http-status';
 import { AppError } from '../../utils';
 import { TRole } from '../User/user.constant';
@@ -53,20 +54,26 @@ const updateCreditIntoDB = async (userId: string, credits: string) => {
   return updatedUser;
 };
 
-const getAllUserFromDB = async (query: Record<string, unknown>) => {
-  const userQuery = new QueryBuilder(User.find(), query)
+const getAllUserFromDB = async (
+  user: IUser,
+  query: Record<string, unknown>
+) => {
+  const userQuery = new QueryBuilder(
+    User.find({ _id: { $ne: user._id } }),
+    query
+  )
     .search(['fullName', 'role', 'email'])
     .filter()
     .sort()
     .paginate()
     .fields();
 
-  const result = await userQuery.modelQuery;
+  const data = await userQuery.modelQuery;
   const meta = await userQuery.countTotal();
 
   return {
     meta,
-    result,
+    data,
   };
 };
 

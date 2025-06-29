@@ -43,13 +43,14 @@ const fadeInUp = {
 
 export default function SummarizePage() {
   const [inputText, setInputText] = useState<string>("");
-  const [summaryLength, setSummaryLength] = useState<number[]>([30]);
+  // const [summaryLength, setSummaryLength] = useState<number[]>([30]);
   const [summaryType, setSummaryType] = useState<string>("balanced");
   const [summary, setSummary] = useState<string>("");
   const [showSummary, setShowSummary] = useState<boolean>(false);
   const [wordCount, setWordCount] = useState<number>(0);
   const [summaryWordCount, setSummaryWordCount] = useState<number>(0);
   const [reducedTime, setReducedTime] = useState<number>(0);
+  const [reduction, setReduction] = useState<number>(0);
 
   const [copied, setCopied] = useState<boolean>(false);
 
@@ -104,7 +105,7 @@ export default function SummarizePage() {
   const handleSummarize = async () => {
     if (!inputText.trim()) return;
     setShowSummary(false);
-    summarizeFn(inputText.trim())
+    summarizeFn({ content: inputText.trim(), type: summaryType })
       .unwrap()
       .then((res) => {
         if (res?.success) {
@@ -113,6 +114,7 @@ export default function SummarizePage() {
           setWordCount(res.data?.totalContentWordCount);
           setSummaryWordCount(res.data?.summaryWordCount);
           setReducedTime(res.data?.reduceTime);
+          setReduction(res?.data?.reduction);
           setShowSummary(true);
         }
       })
@@ -236,7 +238,7 @@ export default function SummarizePage() {
                   </p>
                 </div>
 
-                {/* <div className="space-y-4">
+                <div className="space-y-4">
                   <Label>Summary Type</Label>
                   <Select value={summaryType} onValueChange={setSummaryType}>
                     <SelectTrigger>
@@ -251,15 +253,15 @@ export default function SummarizePage() {
                     </SelectContent>
                   </Select>
 
-                  <Label>Summary Length: {summaryLength[0]}%</Label>
+                  {/* <Label>Summary Length: {summaryLength[0]}%</Label>
                   <Slider
                     value={summaryLength}
                     onValueChange={setSummaryLength}
                     max={50}
                     min={10}
                     step={5}
-                  />
-                </div> */}
+                  /> */}
+                </div>
 
                 <Button
                   onClick={handleSummarize}
@@ -317,6 +319,7 @@ export default function SummarizePage() {
                         size="sm"
                         onClick={() => handleExport("txt")}
                       >
+                        <Download className="h-4 w-4" />
                         Download
                       </Button>
                     </div>
@@ -379,10 +382,7 @@ export default function SummarizePage() {
                             Reduction
                           </p>
                           <p className="text-lg font-bold text-blue-600">
-                            {Math.round(
-                              ((wordCount - summaryWordCount) / wordCount) * 100
-                            )}
-                            %
+                            {reduction}%
                           </p>
                         </div>
                         <div className="text-center p-3 bg-green-50 rounded-lg">

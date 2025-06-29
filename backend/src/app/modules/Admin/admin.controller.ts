@@ -23,11 +23,18 @@ const updateUserCredit = asyncHandler(async (req, res) => {
 });
 
 const getAllUsers = asyncHandler(async (req, res) => {
-  const result = await AdminService.getAllUserFromDB(req.query);
+  const result = await AdminService.getAllUserFromDB(req.user, req.query);
 
   res
     .status(status.OK)
-    .json(new AppResponse(status.OK, result, 'Users retrieved successfully'));
+    .json(
+      new AppResponse(
+        status.OK,
+        result.data,
+        'Users retrieved successfully',
+        result.meta
+      )
+    );
 });
 
 export const AdminController = {

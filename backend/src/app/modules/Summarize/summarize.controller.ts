@@ -3,7 +3,10 @@ import { asyncHandler, AppResponse } from '../../utils';
 import { SummarizeService } from './summarize.service';
 
 const summarizeFile = asyncHandler(async (req, res) => {
-  const result = await SummarizeService.summarizeFromText(req.body.content);
+  const result = await SummarizeService.summarizeFromText(
+    req.user,
+    req.body
+  );
 
   res
     .status(status.OK)
