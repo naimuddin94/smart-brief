@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Sparkles, ArrowRight, CheckCircle } from "lucide-react";
+import { Sparkles, ArrowRight, CheckCircle, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
@@ -83,6 +83,7 @@ export default function HomePage() {
           {user ? (
             <>
               <Button variant="outline" onClick={handleLogout}>
+                <LogOut className="h-4 w-4" />
                 Logout
               </Button>
               <Avatar>

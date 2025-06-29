@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { motion } from "framer-motion"
+import { useState } from "react";
+import { motion } from "framer-motion";
 import {
   Sparkles,
   Search,
@@ -16,20 +16,35 @@ import {
   FileText,
   Clock,
   BarChart3,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import Link from "next/link"
+  RefreshCw,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import Link from "next/link";
+import { useGetProfileQuery } from "@/redux/features/auth/authApi";
+import { useGetHistoryQuery } from "@/redux/features/summarize/summarizeApi";
+import { HistoryDialog } from "@/components/shared/HistoryDialog";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.5, ease: "easeOut" },
-}
+};
 
 const staggerContainer = {
   animate: {
@@ -37,102 +52,58 @@ const staggerContainer = {
       staggerChildren: 0.1,
     },
   },
-}
-
-const summaryHistory = [
-  {
-    id: 1,
-    title: "Market Analysis Report Q4 2024",
-    originalLength: 2500,
-    summaryLength: 250,
-    createdAt: "2024-01-15T10:30:00Z",
-    updatedAt: "2024-01-15T10:35:00Z",
-    status: "completed",
-    type: "balanced",
-    tags: ["business", "analysis", "quarterly"],
-  },
-  {
-    id: 2,
-    title: "Product Requirements Document - Mobile App",
-    originalLength: 1800,
-    summaryLength: 180,
-    createdAt: "2024-01-14T14:20:00Z",
-    updatedAt: "2024-01-14T14:25:00Z",
-    status: "completed",
-    type: "concise",
-    tags: ["product", "mobile", "requirements"],
-  },
-  {
-    id: 3,
-    title: "Research Paper on AI Ethics in Healthcare",
-    originalLength: 5000,
-    summaryLength: 500,
-    createdAt: "2024-01-12T09:15:00Z",
-    updatedAt: "2024-01-12T09:20:00Z",
-    status: "completed",
-    type: "comprehensive",
-    tags: ["research", "ai", "healthcare", "ethics"],
-  },
-  {
-    id: 4,
-    title: "Company Policy Update - Remote Work Guidelines",
-    originalLength: 1200,
-    summaryLength: 120,
-    createdAt: "2024-01-10T16:45:00Z",
-    updatedAt: "2024-01-10T16:50:00Z",
-    status: "completed",
-    type: "concise",
-    tags: ["policy", "remote work", "guidelines"],
-  },
-  {
-    id: 5,
-    title: "Technical Documentation - API Integration",
-    originalLength: 3200,
-    summaryLength: 320,
-    createdAt: "2024-01-08T11:30:00Z",
-    updatedAt: "2024-01-08T11:35:00Z",
-    status: "completed",
-    type: "balanced",
-    tags: ["technical", "api", "documentation"],
-  },
-]
+};
 
 export default function HistoryPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterType, setFilterType] = useState("all")
-  const [sortBy, setSortBy] = useState("newest")
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
+    const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    })
-  }
+    });
+  };
 
   const getTypeColor = (type: string) => {
     switch (type) {
       case "concise":
-        return "bg-blue-100 text-blue-800"
+        return "bg-blue-100 text-blue-800";
       case "balanced":
-        return "bg-green-100 text-green-800"
+        return "bg-green-100 text-green-800";
       case "comprehensive":
-        return "bg-purple-100 text-purple-800"
+        return "bg-purple-100 text-purple-800";
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-gray-800";
     }
-  }
+  };
 
-  const filteredSummaries = summaryHistory.filter((summary) => {
-    const matchesSearch =
-      summary.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      summary.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-    const matchesFilter = filterType === "all" || summary.type === filterType
-    return matchesSearch && matchesFilter
-  })
+  const { data, isLoading } = useGetProfileQuery({});
+  const { data: historyData, isLoading: historyLoading } = useGetHistoryQuery(
+    {}
+  );
+
+  if (isLoading || historyLoading) {
+    return (
+      <motion.div
+        key="loading"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="text-center py-16"
+      >
+        <RefreshCw className="h-12 w-12 text-blue-600 animate-spin mx-auto mb-6" />
+        <p className="text-gray-600 text-lg font-medium">
+          Summarizing your content, hang tight...
+        </p>
+      </motion.div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -153,19 +124,32 @@ export default function HistoryPage() {
             </Link>
             <div className="flex items-center space-x-2">
               <Sparkles className="h-8 w-8 text-blue-600" />
-              <span className="text-2xl font-bold text-gray-900">SmartBrief</span>
+              <span className="text-2xl font-bold text-gray-900">
+                SmartBrief
+              </span>
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <Badge variant="secondary">3 credits left</Badge>
+            <Badge variant="secondary">
+              {data?.data?.credits} credits left
+            </Badge>
           </div>
         </div>
       </motion.header>
 
       <div className="container mx-auto px-4 py-8">
-        <motion.div variants={fadeInUp} initial="initial" animate="animate" className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Summary History</h1>
-          <p className="text-gray-600">View and manage all your AI-generated summaries</p>
+        <motion.div
+          variants={fadeInUp}
+          initial="initial"
+          animate="animate"
+          className="mb-8"
+        >
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Summary History
+          </h1>
+          <p className="text-gray-600">
+            View and manage all your AI-generated summaries
+          </p>
         </motion.div>
 
         {/* Filters and Search */}
@@ -200,7 +184,9 @@ export default function HistoryPage() {
                       <SelectItem value="all">All Types</SelectItem>
                       <SelectItem value="concise">Concise</SelectItem>
                       <SelectItem value="balanced">Balanced</SelectItem>
-                      <SelectItem value="comprehensive">Comprehensive</SelectItem>
+                      <SelectItem value="comprehensive">
+                        Comprehensive
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   <Select value={sortBy} onValueChange={setSortBy}>
@@ -232,8 +218,12 @@ export default function HistoryPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Total Summaries</p>
-                    <p className="text-2xl font-bold text-gray-900">{filteredSummaries.length}</p>
+                    <p className="text-sm font-medium text-gray-600">
+                      Total Summaries
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {data?.data?.stats?.totalSummary}
+                    </p>
                   </div>
                   <FileText className="h-8 w-8 text-blue-600" />
                 </div>
@@ -246,9 +236,14 @@ export default function HistoryPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Words Processed</p>
+                    <p className="text-sm font-medium text-gray-600">
+                      Words Processed
+                    </p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {(filteredSummaries.reduce((acc, s) => acc + s.originalLength, 0) / 1000).toFixed(1)}K
+                      {(
+                        Number(data?.data?.stats?.totalWordProcess) / 1000
+                      ).toFixed(2)}
+                      K
                     </p>
                   </div>
                   <BarChart3 className="h-8 w-8 text-green-600" />
@@ -262,9 +257,14 @@ export default function HistoryPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Time Saved</p>
+                    <p className="text-sm font-medium text-gray-600">
+                      Time Saved
+                    </p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {Math.round(filteredSummaries.reduce((acc, s) => acc + s.originalLength, 0) / 200)}h
+                      {(Number(data?.data?.stats?.totalSavedTime) / 60).toFixed(
+                        2
+                      )}
+                      h
                     </p>
                   </div>
                   <Clock className="h-8 w-8 text-purple-600" />
@@ -278,8 +278,20 @@ export default function HistoryPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Avg. Reduction</p>
-                    <p className="text-2xl font-bold text-gray-900">78%</p>
+                    <p className="text-sm font-medium text-gray-600">
+                      Avg. Reduction
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {historyData?.data && historyData.data.length > 0
+                        ? (
+                            historyData.data.reduce(
+                              (acc, item) => acc + item.reduction,
+                              0
+                            ) / historyData.data.length
+                          ).toFixed(1)
+                        : "0.0"}
+                      %
+                    </p>
                   </div>
                   <Calendar className="h-8 w-8 text-orange-600" />
                 </div>
@@ -289,22 +301,35 @@ export default function HistoryPage() {
         </motion.div>
 
         {/* Summary List */}
-        <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-4">
-          {filteredSummaries.map((summary, index) => (
-            <motion.div key={summary.id} variants={fadeInUp} transition={{ delay: 0.1 * index }}>
+        <motion.div
+          variants={staggerContainer}
+          initial="initial"
+          animate="animate"
+          className="space-y-4"
+        >
+          {historyData?.data?.map((summary, index) => (
+            <motion.div
+              key={summary._id}
+              variants={fadeInUp}
+              transition={{ delay: 0.1 * index }}
+            >
               <Card className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold text-gray-900">{summary.title}</h3>
-                        <Badge className={getTypeColor(summary.type)}>{summary.type}</Badge>
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {summary.summary.split(" ").slice(0, 15).join(" ")}
+                        </h3>
+                        <Badge className={getTypeColor(summary.type)}>
+                          {summary.type}
+                        </Badge>
                       </div>
 
                       <div className="flex items-center gap-6 text-sm text-gray-500 mb-3">
                         <span className="flex items-center gap-1">
                           <FileText className="h-4 w-4" />
-                          {summary.originalLength} → {summary.summaryLength} words
+                          {summary.totalWord} → {summary.summaryWord} words
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
@@ -312,13 +337,20 @@ export default function HistoryPage() {
                         </span>
                         <span className="flex items-center gap-1">
                           <BarChart3 className="h-4 w-4" />
-                          {Math.round((1 - summary.summaryLength / summary.originalLength) * 100)}% reduction
+                          {Math.round(
+                            (1 - summary.summaryWord / summary.totalWord) * 100
+                          )}
+                          % reduction
                         </span>
                       </div>
 
                       <div className="flex flex-wrap gap-2">
                         {summary.tags.map((tag, tagIndex) => (
-                          <Badge key={tagIndex} variant="outline" className="text-xs">
+                          <Badge
+                            key={tagIndex}
+                            variant="outline"
+                            className="text-xs"
+                          >
                             {tag}
                           </Badge>
                         ))}
@@ -332,10 +364,16 @@ export default function HistoryPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Summary
-                        </DropdownMenuItem>
+                        <HistoryDialog summary={summary}>
+                          <DropdownMenuItem
+                            onSelect={(e) => {
+                              e.preventDefault();
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Summary
+                          </DropdownMenuItem>
+                        </HistoryDialog>
                         <DropdownMenuItem>
                           <Edit className="h-4 w-4 mr-2" />
                           Edit
@@ -357,12 +395,20 @@ export default function HistoryPage() {
           ))}
         </motion.div>
 
-        {filteredSummaries.length === 0 && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
+        {historyData?.data?.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-12"
+          >
             <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No summaries found</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No summaries found
+            </h3>
             <p className="text-gray-600 mb-4">
-              {searchTerm ? "Try adjusting your search terms" : "Create your first summary to get started"}
+              {searchTerm
+                ? "Try adjusting your search terms"
+                : "Create your first summary to get started"}
             </p>
             <Link href="/summarize">
               <Button>Create New Summary</Button>
@@ -371,5 +417,5 @@ export default function HistoryPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

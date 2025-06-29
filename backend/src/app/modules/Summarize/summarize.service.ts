@@ -8,6 +8,7 @@ import ModelClient, { isUnexpected } from '@azure-rest/ai-inference';
 import { AzureKeyCredential } from '@azure/core-auth';
 import User from '../User/user.model';
 import History from '../History/history.model';
+import { ROLE } from '../User/user.constant';
 
 // Redis Client Setup
 const redis = createClient({ url: process.env.REDIS_URL });
@@ -139,10 +140,14 @@ const summarizeFromText = async (
     Logger.error('Redis set error:', err);
   }
 
-  await User.findByIdAndUpdate(user._id, { $inc: { credits: -1 } });
+  if (user?.role !== ROLE.ADMIN) {
+    await User.findByIdAndUpdate(user._id, { $inc: { credits: -1 } });
+  }
+
   await History.create({
     user: user._id,
     content,
+    type,
     summary: summaryObj.summary,
     tags: summaryObj.tags,
     totalWord: wordCount,

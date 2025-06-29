@@ -1,5 +1,5 @@
 import { baseApi } from "@/redux/api/baseApi";
-import { TResponse, TSummary } from "@/types";
+import { THistory, TResponse, TSummary } from "@/types";
 
 const summarizeApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -13,7 +13,23 @@ const summarizeApi = baseApi.injectEndpoints({
         body: data,
       }),
     }),
+    getHistory: builder.query<TResponse<THistory[]>, any, any>({
+      query: (param) => {
+        const params = new URLSearchParams();
+
+        for (const key in param) {
+          params.append(key, param[key]);
+        }
+
+        return {
+          url: "/history",
+          method: "GET",
+          params: params,
+        };
+      },
+      providesTags: ["history"],
+    }),
   }),
 });
 
-export const { useGetSummaryMutation } = summarizeApi;
+export const { useGetSummaryMutation, useGetHistoryQuery } = summarizeApi;

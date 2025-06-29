@@ -28,6 +28,10 @@ const historySchema = new Schema<IHistory>(
       type: Number,
       required: true,
     },
+    type: {
+      type: String,
+      required: true,
+    },
     reduction: {
       type: Number,
       required: true,

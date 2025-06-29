@@ -1,4 +1,5 @@
 import { baseApi } from "@/redux/api/baseApi";
+import { TProfile, TResponse } from "@/types";
 
 const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -37,6 +38,13 @@ const authApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["users", "history"],
     }),
+    getProfile: builder.query<TResponse<TProfile>, any, null>({
+      query: () => ({
+        url: "/auth/profile",
+        method: "GET",
+      }),
+      providesTags: ["profile"],
+    }),
   }),
 });
 
@@ -46,4 +54,5 @@ export const {
   useResendOtpMutation,
   useLoginMutation,
   useLogoutMutation,
+  useGetProfileQuery,
 } = authApi;

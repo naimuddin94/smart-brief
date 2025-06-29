@@ -17,7 +17,13 @@ const getAllHistoriesFromDB = async (
     mongoQuery.user = user._id;
   }
 
-  const queryBuilder = new QueryBuilder(History.find(mongoQuery), query)
+  const queryBuilder = new QueryBuilder(
+    History.find(mongoQuery).populate({
+      path: 'user',
+      select: 'fullName email credits createdAt',
+    }),
+    query
+  )
     .search(['summary', 'tags'])
     .filter()
     .sort()

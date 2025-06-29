@@ -11,6 +11,8 @@ import {
   Plus,
   TrendingUp,
   Clock,
+  RefreshCw,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +21,17 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { recentSummaries } from "@/constants";
 import Logo from "@/components/shared/Logo";
+import {
+  useGetProfileQuery,
+  useLogoutMutation,
+} from "@/redux/features/auth/authApi";
+import { useGetHistoryQuery } from "@/redux/features/summarize/summarizeApi";
+import moment from "moment";
+import { HistoryDialog } from "@/components/shared/HistoryDialog";
+import { useDispatch } from "react-redux";
+import { removeUser } from "@/redux/features/auth/authSlice";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -35,8 +48,48 @@ const staggerContainer = {
 };
 
 export default function DashboardPage() {
-  const [credits] = useState(3); // Current credits
-  const [totalCredits] = useState(5); // Total credits for free plan
+  const [totalCredits] = useState(5);
+  const dispatch = useDispatch();
+  const router = useRouter();
+
+  const { data, isLoading } = useGetProfileQuery({});
+  const { data: historyData, isLoading: historyLoading } = useGetHistoryQuery({
+    limit: 3,
+  });
+
+  const [logoutFn] = useLogoutMutation();
+
+  const handleLogout = () => {
+    logoutFn({})
+      .unwrap()
+      .then((res) => {
+        if (res?.success) {
+          dispatch(removeUser());
+          toast.success(res?.message);
+          router.push("/");
+        }
+      })
+      .catch((err) => {
+        toast.error(err?.data?.message || "Something went wrong!");
+      });
+  };
+
+  if (isLoading || historyLoading) {
+    return (
+      <motion.div
+        key="loading"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="text-center py-16"
+      >
+        <RefreshCw className="h-12 w-12 text-blue-600 animate-spin mx-auto mb-6" />
+        <p className="text-gray-600 text-lg font-medium">
+          Summarizing your content, hang tight...
+        </p>
+      </motion.div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -53,12 +106,12 @@ export default function DashboardPage() {
             <div className="flex items-center space-x-2">
               <CreditCard className="h-5 w-5 text-gray-500" />
               <span className="text-sm font-medium">
-                {credits} credits left
+                {data?.data?.credits} credits left
               </span>
             </div>
-            <Button variant="outline" size="sm">
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="h-4 w-4" />
+              Logout
             </Button>
           </div>
         </div>
@@ -76,8 +129,8 @@ export default function DashboardPage() {
             Welcome back, John! 👋
           </h1>
           <p className="text-gray-600">
-            Ready to summarize some content? You have {credits} credits
-            remaining.
+            Ready to summarize some content? You have {data?.data?.credits}{" "}
+            credits remaining.
           </p>
         </motion.div>
 
@@ -97,7 +150,7 @@ export default function DashboardPage() {
                       Credits Left
                     </p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {credits}
+                      {data?.data?.credits}
                     </p>
                   </div>
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
@@ -106,11 +159,11 @@ export default function DashboardPage() {
                 </div>
                 <div className="mt-4">
                   <Progress
-                    value={(credits / totalCredits) * 100}
+                    value={(Number(data?.data?.credits) / totalCredits) * 100}
                     className="h-2"
                   />
                   <p className="text-xs text-gray-500 mt-2">
-                    {credits} of {totalCredits} credits
+                    {data?.data?.credits} of {totalCredits} credits
                   </p>
                 </div>
               </CardContent>
@@ -125,13 +178,17 @@ export default function DashboardPage() {
                     <p className="text-sm font-medium text-gray-600">
                       Total Summaries
                     </p>
-                    <p className="text-2xl font-bold text-gray-900">12</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {data?.data?.stats?.totalSummary}
+                    </p>
                   </div>
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                     <FileText className="h-6 w-6 text-green-600" />
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">+3 from last week</p>
+                <p className="text-xs text-gray-500 mt-2">
+                  +{data?.data?.stats?.lastWeekSummary} from last week
+                </p>
               </CardContent>
             </Card>
           </motion.div>
@@ -144,14 +201,25 @@ export default function DashboardPage() {
                     <p className="text-sm font-medium text-gray-600">
                       Words Processed
                     </p>
-                    <p className="text-2xl font-bold text-gray-900">25.4K</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {(
+                        Number(data?.data?.stats?.totalWordProcess) / 1000
+                      ).toFixed(2)}
+                      K
+                    </p>
                   </div>
                   <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
                     <TrendingUp className="h-6 w-6 text-purple-600" />
                   </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  Avg. 2.1K per summary
+                  Avg.{" "}
+                  {(
+                    Number(data?.data?.stats?.totalWordProcess) /
+                    Number(data?.data?.stats?.totalSummary) /
+                    1000
+                  ).toFixed(2)}
+                  K per summary
                 </p>
               </CardContent>
             </Card>
@@ -165,7 +233,12 @@ export default function DashboardPage() {
                     <p className="text-sm font-medium text-gray-600">
                       Time Saved
                     </p>
-                    <p className="text-2xl font-bold text-gray-900">8.5h</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {(Number(data?.data?.stats?.totalSavedTime) / 60).toFixed(
+                        2
+                      )}
+                      h
+                    </p>
                   </div>
                   <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
                     <Clock className="h-6 w-6 text-orange-600" />
@@ -241,7 +314,7 @@ export default function DashboardPage() {
                   </motion.div>
                 </Link>
 
-                {credits === 0 && (
+                {data?.data?.credits === 0 && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -287,9 +360,9 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentSummaries.map((summary, index) => (
+                  {historyData?.data.map((summary, index) => (
                     <motion.div
-                      key={summary.id}
+                      key={summary._id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.1 * index }}
@@ -297,21 +370,27 @@ export default function DashboardPage() {
                     >
                       <div className="flex-1">
                         <h4 className="font-medium text-gray-900 mb-1">
-                          {summary.title}
+                          {summary.summary.split(" ").slice(0, 6).join(" ")}
                         </h4>
                         <div className="flex items-center space-x-4 text-sm text-gray-500">
                           <span>
-                            {summary.wordCount} words → {summary.summaryLength}{" "}
+                            {summary.totalWord} words → {summary.summaryWord}{" "}
                             words
                           </span>
-                          <span>{summary.createdAt}</span>
+                          <span>
+                            {moment(summary.createdAt).format(
+                              "MMMM Do YYYY, h:mm a"
+                            )}
+                          </span>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Badge variant="secondary">{summary.status}</Badge>
-                        <Button variant="ghost" size="sm">
-                          View
-                        </Button>
+                        <Badge variant="secondary">{summary.type}</Badge>
+                        <HistoryDialog summary={summary}>
+                          <Button variant="ghost" size="sm">
+                            View
+                          </Button>
+                        </HistoryDialog>
                       </div>
                     </motion.div>
                   ))}

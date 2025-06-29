@@ -8,6 +8,7 @@ export interface IHistory extends Document {
   totalWord: number;
   summaryWord: number;
   reduction: number;
+  type: string;
   savedTime: number;
   createdAt: Date;
 }

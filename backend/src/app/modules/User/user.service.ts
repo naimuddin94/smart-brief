@@ -18,6 +18,7 @@ import fs from 'fs';
 import { OTP_REASON } from './user.constant';
 import config from '../../config';
 import jwt from 'jsonwebtoken';
+import History from '../History/history.model';
 
 const savePendingUserIntoDB = async (payload: TSignupPayload) => {
   const { email, password, fullName } = payload;
@@ -155,6 +156,7 @@ const signinIntoDB = async (payload: TSigninPayload) => {
   const refreshToken = user.generateRefreshToken();
 
   user.refreshToken = refreshToken;
+  user.lastActiveAt = new Date();
   await user.save();
 
   return {
@@ -422,6 +424,7 @@ const resetPasswordIntoDB = async (resetToken: string, newPassword: string) => {
     const refreshToken = updatedUser.generateRefreshToken();
 
     updatedUser.refreshToken = refreshToken;
+    updatedUser.lastActiveAt = new Date();
     await updatedUser.save({ session });
 
     await PendingUser.findOneAndDelete(
@@ -475,7 +478,66 @@ const refreshTokenFromDB = async (user: IUser, userRefreshToken: string) => {
 };
 
 const getProfileFromDB = async (user: IUser) => {
-  return user;
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+  const stats = await History.aggregate([
+    {
+      $match: {
+        user: user._id,
+      },
+    },
+    {
+      $facet: {
+        overall: [
+          {
+            $group: {
+              _id: null,
+              totalSavedTime: { $sum: '$savedTime' },
+              totalReduction: { $avg: '$reduction' },
+              totalWordProcess: { $sum: '$totalWord' },
+              totalSummaryWord: { $sum: '$summaryWord' },
+              totalSummary: { $sum: 1 },
+            },
+          },
+        ],
+        lastWeek: [
+          {
+            $match: {
+              createdAt: { $gte: oneWeekAgo },
+            },
+          },
+          {
+            $count: 'lastWeekSummary',
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        totalSavedTime: {
+          $ifNull: [{ $arrayElemAt: ['$overall.totalSavedTime', 0] }, 0],
+        },
+        totalReduction: {
+          $ifNull: [{ $arrayElemAt: ['$overall.totalReduction', 0] }, 0],
+        },
+        totalWordProcess: {
+          $ifNull: [{ $arrayElemAt: ['$overall.totalWordProcess', 0] }, 0],
+        },
+        totalSummaryWord: {
+          $ifNull: [{ $arrayElemAt: ['$overall.totalSummaryWord', 0] }, 0],
+        },
+        totalSummary: {
+          $ifNull: [{ $arrayElemAt: ['$overall.totalSummary', 0] }, 0],
+        },
+        lastWeekSummary: {
+          $ifNull: [{ $arrayElemAt: ['$lastWeek.lastWeekSummary', 0] }, 0],
+        },
+      },
+    },
+  ]);
+
+  return { ...user.toObject(), stats: stats[0] };
 };
 
 export const UserService = {
