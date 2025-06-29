@@ -38,7 +38,6 @@ const summarizeFromText = async (text: string) => {
     Logger.error('Redis get error:', err);
   }
 
-
   const client = ModelClient(
     endpoint,
     new AzureKeyCredential(config.github_token!)

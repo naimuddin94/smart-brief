@@ -11,6 +11,8 @@ import {
   RefreshCw,
   ArrowLeft,
   Sparkles,
+  BarChart3,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -234,7 +236,7 @@ export default function SummarizePage() {
                   </p>
                 </div>
 
-                <div className="space-y-4">
+                {/* <div className="space-y-4">
                   <Label>Summary Type</Label>
                   <Select value={summaryType} onValueChange={setSummaryType}>
                     <SelectTrigger>
@@ -257,7 +259,7 @@ export default function SummarizePage() {
                     min={10}
                     step={5}
                   />
-                </div>
+                </div> */}
 
                 <Button
                   onClick={handleSummarize}
@@ -339,28 +341,81 @@ export default function SummarizePage() {
                   )}
 
                   {!isLoading && showSummary && (
+                    // <motion.div
+                    //   key="summary"
+                    //   initial={{ opacity: 0, y: 20 }}
+                    //   animate={{ opacity: 1, y: 0 }}
+                    //   exit={{ opacity: 0, y: -20 }}
+                    //   className="space-y-6"
+                    // >
+                    //   <div className="bg-gray-50 p-4 rounded-lg">
+                    //     <p className="text-gray-800 leading-relaxed">
+                    //       {summary}
+                    //     </p>
+                    //   </div>
+                    //   <div className="text-sm text-gray-600 space-y-1">
+                    //     <p>
+                    //       <strong>Total Words:</strong> {wordCount}
+                    //     </p>
+                    //     <p>
+                    //       <strong>Summary Words:</strong> {summaryWordCount}
+                    //     </p>
+                    //     <p>
+                    //       <strong>Time Saved:</strong> ~{reducedTime} mins
+                    //     </p>
+                    //   </div>
+                    // </motion.div>
                     <motion.div
-                      key="summary"
+                      key="complete"
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
                       className="space-y-6"
                     >
-                      <div className="bg-gray-50 p-4 rounded-lg">
+                      {/* Summary Stats */}
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center p-3 bg-blue-50 rounded-lg">
+                          <BarChart3 className="h-6 w-6 text-blue-600 mx-auto mb-1" />
+                          <p className="text-sm font-medium text-blue-900">
+                            Reduction
+                          </p>
+                          <p className="text-lg font-bold text-blue-600">
+                            {Math.round(
+                              ((wordCount - summaryWordCount) / wordCount) * 100
+                            )}
+                            %
+                          </p>
+                        </div>
+                        <div className="text-center p-3 bg-green-50 rounded-lg">
+                          <Clock className="h-6 w-6 text-green-600 mx-auto mb-1" />
+                          <p className="text-sm font-medium text-green-900">
+                            Time Saved
+                          </p>
+                          <p className="text-lg font-bold text-green-600">
+                            {reducedTime} min
+                          </p>
+                        </div>
+                        <div className="text-center p-3 bg-purple-50 rounded-lg">
+                          <FileText className="h-6 w-6 text-purple-600 mx-auto mb-1" />
+                          <p className="text-sm font-medium text-purple-900">
+                            Words
+                          </p>
+                          <p className="text-lg font-bold text-purple-600">
+                            {summary.split(" ").length}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Summary Content */}
+                      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 border border-blue-200">
                         <p className="text-gray-800 leading-relaxed">
                           {summary}
                         </p>
                       </div>
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <p>
-                          <strong>Total Words:</strong> {wordCount}
-                        </p>
-                        <p>
-                          <strong>Summary Words:</strong> {summaryWordCount}
-                        </p>
-                        <p>
-                          <strong>Time Saved:</strong> ~{reducedTime} mins
-                        </p>
+
+                      <div className="text-center">
+                        <Badge className="bg-green-100 text-green-800 border-green-200">
+                          ✨ Summary Complete
+                        </Badge>
                       </div>
                     </motion.div>
                   )}
