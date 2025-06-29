@@ -102,6 +102,7 @@ const verifyOtpForForgetPassword = asyncHandler(async (req, res) => {
 
   res
     .status(status.OK)
+    .cookie('resetPasswordToken', result.resetToken, options as CookieOptions)
     .json(new AppResponse(status.OK, result, 'OTP verified successfully'));
 });
 
@@ -121,6 +122,27 @@ const resetPassword = asyncHandler(async (req, res) => {
     .json(new AppResponse(status.OK, result, 'Reset password successfully'));
 });
 
+const refreshToken = asyncHandler(async (req, res) => {
+  const refreshToken = req.cookies?.refreshToken;
+  const result = await UserService.refreshTokenFromDB(req.user, refreshToken);
+
+  res
+    .status(status.OK)
+    .cookie('accessToken', result.accessToken, options as CookieOptions)
+    .cookie('refreshToken', result.refreshToken, options as CookieOptions)
+    .json(
+      new AppResponse(status.OK, result, 'Refresh access token successfully')
+    );
+});
+
+const getProfile = asyncHandler(async (req, res) => {
+  const result = await UserService.getProfileFromDB(req.user);
+
+  res
+    .status(status.OK)
+    .json(new AppResponse(status.OK, result, 'Profile retrieved successfully'));
+});
+
 export const UserController = {
   signup,
   signupVerification,
@@ -133,4 +155,6 @@ export const UserController = {
   forgetPassword,
   verifyOtpForForgetPassword,
   resetPassword,
+  refreshToken,
+  getProfile,
 };

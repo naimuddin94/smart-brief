@@ -74,4 +74,8 @@ router
     UserController.resetPassword
   );
 
+router.route('/refresh-token').post(auth(), UserController.refreshToken);
+
+router.route('/profile').get(auth(), UserController.getProfile);
+
 export const UserRoutes = router;

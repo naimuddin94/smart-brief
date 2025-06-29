@@ -7,6 +7,7 @@ import config from '../../config';
 import ModelClient, { isUnexpected } from '@azure-rest/ai-inference';
 import { AzureKeyCredential } from '@azure/core-auth';
 import User from '../User/user.model';
+import History from '../History/history.model';
 
 // Redis Client Setup
 const redis = createClient({ url: process.env.REDIS_URL });
@@ -43,6 +44,10 @@ const summarizeFromText = async (
     }
   } catch (err) {
     Logger.error('Redis get error:', err);
+  }
+
+  if (user?.credits <= 0 && user?.role !== 'admin') {
+    throw new AppError(status.BAD_REQUEST, 'You have not enough credit');
   }
 
   const client = ModelClient(
@@ -135,6 +140,16 @@ const summarizeFromText = async (
   }
 
   await User.findByIdAndUpdate(user._id, { $inc: { credits: -1 } });
+  await History.create({
+    user: user._id,
+    content,
+    summary: summaryObj.summary,
+    tags: summaryObj.tags,
+    totalWord: wordCount,
+    summaryWord: summaryWordCount,
+    reduction: summaryObj.reduction,
+    savedTime: summaryObj.reduceTime,
+  });
 
   return {
     ...summaryObj,

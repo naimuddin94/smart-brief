@@ -1,5 +1,5 @@
 import httpStatus from 'http-status';
-import jwt, { JwtPayload } from 'jsonwebtoken';
+import jwt, { JwtPayload, TokenExpiredError } from 'jsonwebtoken';
 import config from '../config';
 import { AppError, asyncHandler } from '../utils';
 import { TRole } from '../modules/User/user.constant';
@@ -17,10 +17,21 @@ const auth = (...requiredRoles: TRole[]) => {
     }
 
     // checking if the given token is valid
-    const decoded = jwt.verify(
-      token,
-      config.jwt_access_secret as string
-    ) as JwtPayload;
+    let decoded: JwtPayload;
+
+    // Check if token is valid and not expired
+    try {
+      decoded = jwt.verify(
+        token,
+        config.jwt_access_secret as string
+      ) as JwtPayload;
+    } catch (err) {
+      if (err instanceof TokenExpiredError) {
+        throw new AppError(httpStatus.UNAUTHORIZED, 'Token has expired');
+      } else {
+        throw new AppError(httpStatus.UNAUTHORIZED, 'Invalid token');
+      }
+    }
 
     const { id } = decoded;
 

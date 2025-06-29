@@ -453,6 +453,31 @@ const resetPasswordIntoDB = async (resetToken: string, newPassword: string) => {
   }
 };
 
+const refreshTokenFromDB = async (user: IUser, userRefreshToken: string) => {
+  if (user?.refreshToken !== userRefreshToken) {
+    throw new AppError(status.FORBIDDEN, 'Forbidden access!');
+  }
+
+  const accessToken = user.generateAccessToken();
+  const refreshToken = user.generateRefreshToken();
+
+  user.refreshToken = refreshToken;
+  await user.save({ validateBeforeSave: false });
+
+  return {
+    _id: user._id,
+    fullName: user.fullName,
+    email: user.email,
+    role: user.role,
+    accessToken,
+    refreshToken,
+  };
+};
+
+const getProfileFromDB = async (user: IUser) => {
+  return user;
+};
+
 export const UserService = {
   savePendingUserIntoDB,
   verifyOtpAndSaveUserIntoDB,
@@ -465,4 +490,6 @@ export const UserService = {
   forgotPassword,
   verifyOtpForForgetPassword,
   resetPasswordIntoDB,
+  refreshTokenFromDB,
+  getProfileFromDB,
 };
